@@ -1,9 +1,11 @@
 using MangaApi.Models;
 using MangaApi.Repositories;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MangaApi.Controllers
 {
+    [Authorize] // 🔐 Requiere token para acceder
     [Route("api/[controller]")]
     [ApiController]
     public class MangaController : ControllerBase
@@ -97,6 +99,3 @@ namespace MangaApi.Controllers
         }
     }
 }
-
-
-
