@@ -6,10 +6,11 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using MySql.EntityFrameworkCore.Extensions;
 using System.Text;
+using System.Linq; // 👈 Asegura que FirstOrDefault() funcione
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ✅ Puerto para Railway
+// ✅ Puerto Railway
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
 builder.WebHost.UseUrls($"http://*:{port}");
 
@@ -24,7 +25,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-// ✅ Conexión a MySQL
+// ✅ MySQL
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySQL(builder.Configuration.GetConnectionString("DefaultConnection")!)
 );
@@ -33,7 +34,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<IMangaRepository, MangaRepository>();
 builder.Services.AddScoped<IPrestamoRepository, PrestamoRepository>();
 
-// ✅ Configuración JWT
+// ✅ JWT
 var claveSecreta = builder.Configuration["Jwt:Key"]
     ?? throw new Exception("⚠️ No se encontró la clave secreta JWT en appsettings.json");
 
@@ -57,7 +58,7 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// ✅ Swagger con soporte JWT
+// ✅ Swagger + JWT
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Manga API", Version = "v1" });
@@ -96,13 +97,13 @@ app.UseSwaggerUI(c =>
 
 app.UseHttpsRedirection();
 
-// ✅ Filtro de IP (usando header real de Railway)
+// ✅ Filtro de IP (versión definitiva y funcional)
 app.Use(async (context, next) =>
 {
     var remoteIp = context.Request.Headers["X-Forwarded-For"].FirstOrDefault()
-                  ?? context.Connection.RemoteIpAddress?.ToString();
+                   ?? context.Connection.RemoteIpAddress?.ToString();
 
-    var ipPermitida = "189.162.139.158"; // 👈 CAMBIA esto por tu IP pública real
+    var ipPermitida = "189.162.139.158"; // ⚠️ CAMBIA esto por tu IP pública exacta
 
     if (remoteIp != ipPermitida)
     {
@@ -114,7 +115,7 @@ app.Use(async (context, next) =>
     await next();
 });
 
-// ✅ Seguridad y CORS
+// ✅ Middleware de seguridad
 app.UseCors("PermitirTodo");
 app.UseAuthentication();
 app.UseAuthorization();
