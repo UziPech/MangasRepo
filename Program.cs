@@ -9,6 +9,10 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ✅ 👇 AGREGADO para que Railway detecte el puerto público
+var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
+builder.WebHost.UseUrls($"http://*:{port}");
+
 // ✅ PASO 1: HABILITAR CORS
 builder.Services.AddCors(options =>
 {
@@ -100,6 +104,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.Run();
+
 
 
 
