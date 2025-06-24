@@ -9,6 +9,17 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ✅ PASO 1: HABILITAR CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("PermitirTodo", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+
 // Conexión a MySQL
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySQL(builder.Configuration.GetConnectionString("DefaultConnection")!)
@@ -18,7 +29,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<IMangaRepository, MangaRepository>();
 builder.Services.AddScoped<IPrestamoRepository, PrestamoRepository>();
 
-// 🔐 Configuración JWT con protección contra null
+// 🔐 Configuración JWT
 var claveSecreta = builder.Configuration["Jwt:Key"] 
     ?? throw new Exception("⚠️ No se encontró la clave secreta JWT en appsettings.json");
 
@@ -81,11 +92,13 @@ app.UseSwaggerUI(c =>
 
 app.UseHttpsRedirection();
 
+// ✅ AQUI VA EL USO DE CORS
+app.UseCors("PermitirTodo");
+
 app.UseAuthentication(); // 🔐 Activa autenticación
 app.UseAuthorization();
 
 app.MapControllers();
-
 app.Run();
 
 
