@@ -4,13 +4,12 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using MySql.EntityFrameworkCore.Extensions;
+using System.Net;
 using System.Text;
-using System.Linq; // 👈 Asegura que FirstOrDefault() funcione
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ✅ Puerto Railway
+// ✅ Puerto para Railway
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
 builder.WebHost.UseUrls($"http://*:{port}");
 
@@ -25,7 +24,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-// ✅ MySQL
+// ✅ Conexión a MySQL
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySQL(builder.Configuration.GetConnectionString("DefaultConnection")!)
 );
@@ -34,7 +33,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<IMangaRepository, MangaRepository>();
 builder.Services.AddScoped<IPrestamoRepository, PrestamoRepository>();
 
-// ✅ JWT
+// ✅ Configuración JWT
 var claveSecreta = builder.Configuration["Jwt:Key"]
     ?? throw new Exception("⚠️ No se encontró la clave secreta JWT en appsettings.json");
 
@@ -58,7 +57,7 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// ✅ Swagger + JWT
+// ✅ Swagger con JWT
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Manga API", Version = "v1" });
@@ -89,33 +88,34 @@ builder.Services.AddEndpointsApiExplorer();
 
 var app = builder.Build();
 
+// ✅ Swagger
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "Manga API v1");
 });
 
+// ✅ HTTPS
 app.UseHttpsRedirection();
 
-// ✅ Filtro de IP (versión definitiva y funcional)
+// 🔐 FILTRO POR IP REAL (remoto directo o cabecera Railway)
 app.Use(async (context, next) =>
 {
-    var remoteIp = context.Request.Headers["X-Forwarded-For"].FirstOrDefault()
+    string? ipReal = context.Request.Headers["X-Forwarded-For"].FirstOrDefault()
                    ?? context.Connection.RemoteIpAddress?.ToString();
 
-    var ipPermitida = "189.162.139.158"; // ⚠️ CAMBIA esto por tu IP pública exacta
+    var ipPermitida = "189.162.139.158"; // CAMBIA por tu IP real
 
-    if (remoteIp != ipPermitida)
+    if (ipReal != ipPermitida)
     {
         context.Response.StatusCode = 403;
-        await context.Response.WriteAsync("Acceso denegado desde esta IP.");
+        await context.Response.WriteAsync("🚫 Acceso denegado: IP no autorizada.");
         return;
     }
 
     await next();
 });
 
-// ✅ Middleware de seguridad
 app.UseCors("PermitirTodo");
 app.UseAuthentication();
 app.UseAuthorization();
