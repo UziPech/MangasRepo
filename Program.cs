@@ -6,7 +6,6 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using MySql.EntityFrameworkCore.Extensions;
 using System.Text;
-using System.Linq; // ✅ Necesario para FirstOrDefault
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,7 +57,7 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// ✅ Swagger con JWT
+// ✅ Swagger con soporte JWT
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Manga API", Version = "v1" });
@@ -97,11 +96,13 @@ app.UseSwaggerUI(c =>
 
 app.UseHttpsRedirection();
 
-// ✅ FILTRO por IP pública usando el header X-Forwarded-For
+// ✅ Filtro de IP (usando header real de Railway)
 app.Use(async (context, next) =>
 {
-    var remoteIp = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
-    var ipPermitida = "189.162.139.158"; // 👈 Reemplaza con tu IP pública
+    var remoteIp = context.Request.Headers["X-Forwarded-For"].FirstOrDefault()
+                  ?? context.Connection.RemoteIpAddress?.ToString();
+
+    var ipPermitida = "189.162.139.158"; // 👈 CAMBIA esto por tu IP pública real
 
     if (remoteIp != ipPermitida)
     {
@@ -113,13 +114,14 @@ app.Use(async (context, next) =>
     await next();
 });
 
-// ✅ Middleware de seguridad
+// ✅ Seguridad y CORS
 app.UseCors("PermitirTodo");
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 app.Run();
+
 
 
 
