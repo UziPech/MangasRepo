@@ -4,7 +4,7 @@ function App() {
   const [mangas, setMangas] = useState([]);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/manga", {
+    fetch("https://mangasrepo-production.up.railway.app/api/manga", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -40,3 +40,4 @@ function App() {
 }
 
 export default App;
+

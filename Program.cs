@@ -6,14 +6,15 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using MySql.EntityFrameworkCore.Extensions;
 using System.Text;
+using System.Linq; // ✅ Necesario para FirstOrDefault
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ✅ 👇 AGREGADO para que Railway detecte el puerto público
+// ✅ Puerto para Railway
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
 builder.WebHost.UseUrls($"http://*:{port}");
 
-// ✅ PASO 1: HABILITAR CORS
+// ✅ CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("PermitirTodo", policy =>
@@ -24,17 +25,17 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Conexión a MySQL
+// ✅ Conexión a MySQL
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySQL(builder.Configuration.GetConnectionString("DefaultConnection")!)
 );
 
-// Repositorios
+// ✅ Repositorios
 builder.Services.AddScoped<IMangaRepository, MangaRepository>();
 builder.Services.AddScoped<IPrestamoRepository, PrestamoRepository>();
 
-// 🔐 Configuración JWT
-var claveSecreta = builder.Configuration["Jwt:Key"] 
+// ✅ Configuración JWT
+var claveSecreta = builder.Configuration["Jwt:Key"]
     ?? throw new Exception("⚠️ No se encontró la clave secreta JWT en appsettings.json");
 
 var key = Encoding.UTF8.GetBytes(claveSecreta);
@@ -57,7 +58,7 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// Swagger con JWT
+// ✅ Swagger con JWT
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Manga API", Version = "v1" });
@@ -96,14 +97,30 @@ app.UseSwaggerUI(c =>
 
 app.UseHttpsRedirection();
 
-// ✅ AQUI VA EL USO DE CORS
-app.UseCors("PermitirTodo");
+// ✅ FILTRO por IP pública usando el header X-Forwarded-For
+app.Use(async (context, next) =>
+{
+    var remoteIp = context.Request.Headers["X-Forwarded-For"].FirstOrDefault();
+    var ipPermitida = "189.162.139.158"; // 👈 Reemplaza con tu IP pública
 
-app.UseAuthentication(); // 🔐 Activa autenticación
+    if (remoteIp != ipPermitida)
+    {
+        context.Response.StatusCode = 403;
+        await context.Response.WriteAsync("Acceso denegado desde esta IP.");
+        return;
+    }
+
+    await next();
+});
+
+// ✅ Middleware de seguridad
+app.UseCors("PermitirTodo");
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 app.Run();
+
 
 
 
